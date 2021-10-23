@@ -59,4 +59,4 @@ response=$(curl -X GET -G \
 href=$(echo $response | jq -r '.href')
 
 
-wget -o $output_file --show-progress $href
+wget -O $output_file --show-progress $href
