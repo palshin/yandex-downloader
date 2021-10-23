@@ -1,0 +1,62 @@
+#!/bin/bash
+
+RED='\e[31m'
+NC='\e[0m'
+
+
+function repl { 
+  printf "$1"'%.s' $(eval "echo {1.."$(($2))"}")
+}
+
+function show_error_and_exit {
+  error="Error: $1"
+  length=${#error}
+  star_count=$(($length + 4))
+  printf $RED
+  repl "*" $star_count
+  printf "\n"
+  printf "* $error.*\n"
+  repl "*" $star_count
+  printf $NC
+  printf "\n"
+
+  exit 255
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --oauth=*)
+      oauth="${1#*=}"
+      ;;
+    --public-key=*)
+      public_key="${1#*=}"
+      ;;
+    --output-file=*)
+      output_file="${1#*=}"
+      ;;
+    *)
+    show_error_and_exit "Invalid argument"
+  esac
+  shift
+done
+
+if ! command -v jq &> /dev/null
+then
+  show_error_and_exit "jq command could not be found"
+fi
+
+if [ -z "$oauth" ] || [ -z "$public_key" ] || [ -z "$output_file" ]
+then
+  show_error_and_exit "All parameters are required"
+fi
+
+response=$(curl -X GET -G \
+  --header 'Accept: application/json' \
+  --header 'Authorization: OAuth $oauth' \
+  --data-urlencode "public_key=$public_key" \
+  https://cloud-api.yandex.net/v1/disk/public/resources/download)
+
+href=$(echo $response | jq -r '.href')
+
+
+wget -o $output_file --show-progress $href
